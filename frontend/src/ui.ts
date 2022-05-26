@@ -1,5 +1,6 @@
 import { axiosInstance } from "./service";
 import { AxiosError, AxiosResponse } from "axios";
+import { refreshTokenMock } from "../../constants";
 
 export class Ui {
   private $input = document.querySelector("#targetInput");
@@ -7,7 +8,29 @@ export class Ui {
   private $responseList = document.querySelector("#responseList");
   private $clearBtn = document.querySelector("#clearBtn");
 
-  constructor() {}
+  constructor() {
+    axiosInstance.interceptors.response.use(
+      (res) => res,
+      (error) => {
+        if (error.response.status === 401) {
+          this.showUiErrorResponse(error);
+
+          axiosInstance
+            .post("token", {
+              refreshToken: refreshTokenMock,
+            })
+            .then((res: AxiosResponse<{ token: string }>) => {
+              this.showUiSuccessResponse(res);
+              error.config.headers.authorization = res.data.token;
+
+              return axiosInstance.request(error.config).then((res) => {
+                this.showUiSuccessResponse(res);
+              });
+            });
+        }
+      }
+    );
+  }
 
   public getInputText() {
     //@ts-expect-error
